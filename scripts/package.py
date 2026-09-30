@@ -59,9 +59,11 @@ def main():
         (native / "bin").mkdir(parents=True)
         shutil.copy2(binary, native / "bin" / ("evalproof" + suffix))
         (native / "bin" / ("evalproof" + suffix)).chmod(0o755)
+        # The Elastic License requires every copy to carry its terms.
+        shutil.copy2(ROOT / "LICENSE", native / "LICENSE")
         (native / "package.json").write_text(json.dumps({
             "name": f"@evalproof/cli-{platform}-{cpu}", "version": version,
-            "description": "EvalProof platform executable", "license": "UNLICENSED",
+            "description": "EvalProof platform executable", "license": "Elastic-2.0",
             "os": [platform], "cpu": [cpu], "files": ["bin"],
         }, indent=2))
         npm = "npm.cmd" if os.name == "nt" else "npm"
@@ -69,6 +71,7 @@ def main():
         wrapper = staging / "node"
         shutil.copytree(ROOT / "packages/node", wrapper,
                         ignore=shutil.ignore_patterns("node_modules", "package-lock.json", "tests", "bin"))
+        shutil.copy2(ROOT / "LICENSE", wrapper / "LICENSE")
         manifest = json.loads((wrapper / "package.json").read_text())
         manifest.pop("devDependencies", None)
         manifest.pop("scripts", None)
@@ -79,6 +82,7 @@ def main():
             package = staging / "python"
             shutil.copytree(ROOT / "packages/python", package,
                             ignore=shutil.ignore_patterns("__pycache__", "*.egg-info", "dist", "build", "bin"))
+            shutil.copy2(ROOT / "LICENSE", package / "LICENSE")
             (package / "evalproof/bin").mkdir(parents=True)
             shutil.copy2(binary, package / "evalproof/bin" / ("evalproof" + suffix))
             (package / "evalproof/bin" / ("evalproof" + suffix)).chmod(0o755)

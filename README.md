@@ -84,6 +84,10 @@ Fixtures, grader outputs and reports never upload to EvalProof. Your configured 
 
 The only hosted component is the entitlement service. Lemon Squeezy handles checkout and subscription licenses. Each subscription covers one organization: the service validates the purchased product, records the organization as a Lemon Squeezy license key instance (reusing it on later refreshes), and signs a seven-day offline lease bound to that organization. The organization comes from `EVALPROOF_ORG`, `GITHUB_REPOSITORY_OWNER` or GitLab's `CI_PROJECT_ROOT_NAMESPACE`. CI can use `EVALPROOF_ENTITLEMENT`, or refresh a lease using `EVALPROOF_LICENSE_KEY`; a lease for another organization is rejected. Release binaries pin the service URL and public key at compile time. See [release and operations](docs/release.md).
 
+## License
+
+EvalProof is source-available under the [Elastic License 2.0](LICENSE). You may use, modify and redistribute it, but not offer it as a hosted service or move, change, disable or circumvent its license key functionality, including the entitlement checks that gate CI use. Free local diagnostics need no license key.
+
 ## Verify and package
 
 See the [verification record](docs/verification.md) for measured results and remaining launch checks.

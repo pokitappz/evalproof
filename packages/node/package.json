@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Local evidence-based mutation testing for AI graders",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "Elastic-2.0",
   "bin": { "evalproof": "cli.mjs" },
   "files": ["cli.mjs", "adapter.mjs", "bin", "README.md"],
   "engines": { "node": ">=22.22.0" },

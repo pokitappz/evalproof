@@ -7,7 +7,7 @@ name = "evalproof"
 version = "0.1.0"
 description = "Local evidence-based mutation testing for AI graders"
 requires-python = ">=3.11"
-license = "LicenseRef-Proprietary"
+license = "Elastic-2.0"
 
 [project.scripts]
 evalproof = "evalproof.cli:main"

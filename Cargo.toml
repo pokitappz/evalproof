@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.89"
 publish = false
+license = "Elastic-2.0"
 description = "Local, evidence-based mutation testing for AI evaluators"
 
 [dependencies]
