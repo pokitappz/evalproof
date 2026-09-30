@@ -10,5 +10,6 @@
   "peerDependencies": { "promptfoo": "0.123.0" },
   "peerDependenciesMeta": { "promptfoo": { "optional": true } },
   "devDependencies": { "promptfoo": "0.123.0" },
+  "overrides": { "fast-uri": "^3.1.8" },
   "scripts": { "test": "node --test tests/*.test.mjs" }
 }

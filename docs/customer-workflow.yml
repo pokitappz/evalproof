@@ -36,7 +36,7 @@ jobs:
             .evalproof/latest.json
           key: evalproof-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: evalproof-${{ github.run_id }}-
-      - uses: evalproof/evalproof@v0.1.0
+      - uses: pokitappz/evalproof@v0.1.0
         with:
           version: 0.1.0
           suite: evalproof.json
