@@ -1,0 +1,8 @@
+{
+  "description": "Frozen invoice grader example",
+  "prompts": ["Return the invoice total as JSON"],
+  "providers": ["echo"],
+  "tests": [{
+    "assert": [{"type": "javascript", "value": "JSON.parse(output).total === 125"}]
+  }]
+}

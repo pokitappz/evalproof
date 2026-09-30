@@ -1,0 +1,134 @@
+name: EvalProof evaluator gate
+description: Block pull requests when your AI grader accepts proven-incorrect outputs. Requires an EvalProof Team subscription.
+branding:
+  icon: shield
+  color: blue
+inputs:
+  version:
+    description: Pinned EvalProof package version to install from PyPI.
+    required: true
+  suite:
+    description: Path to the suite configuration.
+    default: evalproof.json
+  license-key:
+    description: Lemon Squeezy license key (store it as a repository or organization secret).
+    default: ''
+  entitlement:
+    description: Optional pre-issued offline entitlement, instead of refreshing with the license key.
+    default: ''
+  baseline:
+    description: Compare pull requests with the latest successful default-branch evidence.
+    default: 'true'
+  upload-evidence:
+    description: >-
+      Save default-branch evidence as the baseline artifact. The evidence contains your
+      fixtures and grader reasons; enable only when artifact storage is approved for them.
+    default: 'false'
+  comment:
+    description: Post or update one pull request comment with the summary. The summary omits payloads and grader reasons.
+    default: 'true'
+  github-token:
+    description: Token used to read baseline artifacts and write the pull request comment.
+    default: ${{ github.token }}
+outputs:
+  status:
+    description: PASS, FAIL, INCONCLUSIVE or ERROR.
+    value: ${{ steps.check.outputs.status }}
+runs:
+  using: composite
+  steps:
+    - name: Locate evidence
+      id: paths
+      shell: bash
+      env:
+        SUITE: ${{ inputs.suite }}
+      run: echo "state=$(dirname "$SUITE")/.evalproof" >> "$GITHUB_OUTPUT"
+
+    - name: Install EvalProof
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: python -m pip install --disable-pip-version-check "evalproof==${VERSION}"
+
+    - name: Restore baseline evidence
+      if: inputs.baseline == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        STATE: ${{ steps.paths.outputs.state }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        WORKFLOW: ${{ github.workflow }}
+      run: |
+        state="$STATE"
+        run_id="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$WORKFLOW" --branch "$DEFAULT_BRANCH" \
+          --event push --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty' || true)"
+        if [ -n "$run_id" ] && gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --name evalproof-baseline --dir "$state/baseline"; then
+          echo "Baseline restored from run $run_id."
+        else
+          echo "No baseline evidence found; this run is not compared."
+        fi
+
+    - name: Run the paid gate
+      id: check
+      shell: bash
+      env:
+        SUITE: ${{ inputs.suite }}
+        STATE: ${{ steps.paths.outputs.state }}
+        EVALPROOF_LICENSE_KEY: ${{ inputs.license-key }}
+        EVALPROOF_ENTITLEMENT: ${{ inputs.entitlement }}
+      run: |
+        [ -n "$EVALPROOF_ENTITLEMENT" ] || unset EVALPROOF_ENTITLEMENT
+        [ -n "$EVALPROOF_LICENSE_KEY" ] || unset EVALPROOF_LICENSE_KEY
+        state="$STATE"
+        args=(--suite "$SUITE" --state "$state" --run-id "ci-${GITHUB_RUN_ID}")
+        if [ "$GITHUB_RUN_ATTEMPT" -gt 1 ]; then args+=(--require-resume); fi
+        if [ -f "$state/baseline/latest.json" ]; then args+=(--baseline "$state/baseline/latest.json"); fi
+        set +e
+        evalproof check "${args[@]}"
+        code=$?
+        set -e
+        status="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' "$state/latest.json" 2>/dev/null || echo ERROR)"
+        echo "status=$status" >> "$GITHUB_OUTPUT"
+        echo "code=$code" >> "$GITHUB_OUTPUT"
+
+    - name: Comment on the pull request
+      if: >-
+        always() && inputs.comment == 'true' && github.event_name == 'pull_request'
+        && github.event.pull_request.head.repo.full_name == github.repository
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        STATE: ${{ steps.paths.outputs.state }}
+        PR: ${{ github.event.pull_request.number }}
+      run: |
+        summary="$STATE/summary.md"
+        if [ ! -f "$summary" ]; then
+          echo "No summary was produced; skipping the comment."
+          exit 0
+        fi
+        marker='<!-- evalproof-gate -->'
+        body="$(printf '%s\n%s' "$marker" "$(cat "$summary")")"
+        existing="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+          --jq "map(select(.body | startswith(\"$marker\"))) | .[0].id // empty" | head -n1)"
+        if [ -n "$existing" ]; then
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" -f body="$body" > /dev/null
+        else
+          gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -f body="$body" > /dev/null
+        fi
+
+    - name: Save default-branch baseline
+      if: >-
+        always() && inputs.upload-evidence == 'true' && github.event_name == 'push'
+        && github.ref_name == github.event.repository.default_branch
+      uses: actions/upload-artifact@v7.0.1
+      with:
+        name: evalproof-baseline
+        path: ${{ steps.paths.outputs.state }}/latest.json
+        retention-days: 30
+        if-no-files-found: ignore
+
+    - name: Report the gate result
+      shell: bash
+      env:
+        CODE: ${{ steps.check.outputs.code }}
+      run: exit "${CODE:-2}"

@@ -1,0 +1,58 @@
+name: Build release candidate
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: aarch64-apple-darwin
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+          - os: windows-2025
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TARGET_DIR: target
+      EVALPROOF_LICENSE_PUBLIC_KEY: ${{ vars.EVALPROOF_LICENSE_PUBLIC_KEY }}
+      EVALPROOF_ENTITLEMENT_URL: ${{ vars.EVALPROOF_ENTITLEMENT_URL }}
+      EVALPROOF_CHECKOUT_URL: ${{ vars.EVALPROOF_CHECKOUT_URL }}
+      EVALPROOF_PORTAL_URL: ${{ vars.EVALPROOF_PORTAL_URL }}
+      EVALPROOF_LICENSE_ENVIRONMENT: live
+      MACOSX_DEPLOYMENT_TARGET: '11.0'
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+      - run: rustup update stable --no-self-update
+      - run: rustup target add ${{ matrix.target }}
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - run: python -m pip install build
+      - run: cargo test --locked --all-targets
+      - run: cargo build --release --locked --bin evalproof --target ${{ matrix.target }}
+      - shell: bash
+        run: |
+          suffix=""
+          if [ "$RUNNER_OS" = "Windows" ]; then suffix=".exe"; fi
+          python scripts/package.py --target '${{ matrix.target }}' --binary "target/${{ matrix.target }}/release/evalproof${suffix}"
+      - run: python -c "import glob, subprocess, sys; subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', *glob.glob('dist/${{ matrix.target }}/*.whl')])"
+      - run: python scripts/smoke_package.py
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: evalproof-${{ matrix.target }}
+          path: dist/${{ matrix.target }}/
+          retention-days: 14
+          if-no-files-found: error

@@ -1,0 +1,9 @@
+target
+dist
+**/node_modules
+**/.evalproof
+**/__pycache__
+.git
+.env
+*.lease
+*.pem

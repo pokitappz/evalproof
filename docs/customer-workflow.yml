@@ -1,0 +1,60 @@
+# Copy into your repository's .github/workflows. Replace the suite path if yours
+# differs. The action and package names are working names until ownership is
+# confirmed; pin the release you reviewed.
+name: Evaluator contracts
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 5 * * *'
+permissions:
+  contents: read
+  # Reads the latest default-branch baseline artifact.
+  actions: read
+  # Posts one updatable summary comment. Remove if you set comment: 'false'.
+  pull-requests: write
+jobs:
+  gate:
+    # Graders are executable customer code. Never expose keys to fork PRs.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+      # Install your grader's own dependencies.
+      - run: python -m pip install -r requirements.txt
+      # Save only same-workflow evidence, never a shared cache supplied by a fork.
+      - uses: actions/cache/restore@v6.1.0
+        if: vars.EVALPROOF_CACHE_EVIDENCE == 'true'
+        with:
+          path: |
+            .evalproof/runs
+            .evalproof/latest.json
+          key: evalproof-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: evalproof-${{ github.run_id }}-
+      - uses: evalproof/evalproof@v0.1.0
+        with:
+          version: 0.1.0
+          suite: evalproof.json
+          license-key: ${{ secrets.EVALPROOF_LICENSE_KEY }}
+          # Default-branch evidence contains fixtures. Opt in only when artifact storage is approved.
+          upload-evidence: ${{ vars.EVALPROOF_UPLOAD_REPORTS == 'true' }}
+        # For an LLM suite, pass your grading provider keys:
+        # env:
+        #   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - uses: actions/cache/save@v6.1.0
+        if: always() && vars.EVALPROOF_CACHE_EVIDENCE == 'true'
+        with:
+          path: |
+            .evalproof/runs
+            .evalproof/latest.json
+          key: evalproof-${{ github.run_id }}-${{ github.run_attempt }}
+
+# Without the action: install the package, then run
+#   evalproof check --suite evalproof.json --run-id "ci-${GITHUB_RUN_ID}"
+# adding --require-resume when GITHUB_RUN_ATTEMPT > 1, with EVALPROOF_LICENSE_KEY
+# set from a secret. Exit codes: 0 PASS, 1 FAIL, 2 INCONCLUSIVE or ERROR.

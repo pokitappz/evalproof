@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privacy - EvalProof</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header><a class="brand" href="./">EvalProof</a><nav><a href="./#pricing">Pricing</a></nav></header>
+<main><article>
+  <p class="draft"><strong>Draft.</strong> This describes how the software behaves. Replace it with reviewed legal text before enabling live checkout.</p>
+  <h1>Privacy</h1>
+  <h2>What stays with you</h2>
+  <p>The EvalProof command-line tool runs on your computers and CI runners. Fixtures, model outputs, grader responses, contracts and reports are never sent to us. The tool contains no analytics or telemetry.</p>
+  <h2>What the license service receives</h2>
+  <p>When a paid CI run refreshes its license lease, the tool sends your license key and your organization name (for example your GitHub owner name) to the EvalProof license service. The service forwards them to Lemon Squeezy to validate the subscription and record the organization as an activation of your key. The service does not log request bodies or keep its own customer records.</p>
+  <h2>Payments</h2>
+  <p>Lemon Squeezy is the merchant of record and processes checkout, billing, tax and receipts under its own privacy policy. We receive the order and subscription details Lemon Squeezy provides to sellers.</p>
+  <h2>Your LLM providers</h2>
+  <p>If your grader calls a model provider, those requests go directly from your infrastructure to that provider under your agreement with them.</p>
+  <h2>Contact</h2>
+  <p>Questions: <a href="mailto:SUPPORT_EMAIL">SUPPORT_EMAIL</a></p>
+</article></main>
+<footer><a href="./">Home</a><a href="terms.html">Terms</a></footer>
+</body>
+</html>

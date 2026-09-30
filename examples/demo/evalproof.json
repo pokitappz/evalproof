@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "name": "Evaluator contract checks",
+  "confirmed": true,
+  "adapter": {
+    "command": [
+      "python3",
+      "evalproof-python.py",
+      "grader.py:strict"
+    ],
+    "mode": "deterministic",
+    "dependencies": [
+      "evalproof-python.py",
+      "grader.py"
+    ],
+    "environment": [],
+    "cache_safe": false,
+    "max_cost_microusd": null,
+    "fresh_calls": false,
+    "identity": "customer-grader-v1"
+  },
+  "fixtures": [
+    {
+      "id": "invoice-1",
+      "output": {
+        "invoice_id": "INV-42",
+        "total": 125.0
+      },
+      "context": {},
+      "rules": [
+        {
+          "id": "required:/invoice_id",
+          "path": "/invoice_id",
+          "critical": false,
+          "kind": "required"
+        },
+        {
+          "id": "exact:/invoice_id",
+          "path": "/invoice_id",
+          "critical": false,
+          "kind": "exact",
+          "value": "INV-42"
+        },
+        {
+          "id": "required:/total",
+          "path": "/total",
+          "critical": false,
+          "kind": "required"
+        },
+        {
+          "id": "exact:/total",
+          "path": "/total",
+          "critical": false,
+          "kind": "exact",
+          "value": 125.0
+        }
+      ],
+      "semantic_json": false
+    }
+  ],
+  "policy": {
+    "tolerance": 0.05,
+    "confidence": 0.99,
+    "budget_microusd": 5000000,
+    "time_limit_seconds": 300,
+    "call_timeout_seconds": 30,
+    "concurrency": 8,
+    "max_cases": 10000
+  }
+}

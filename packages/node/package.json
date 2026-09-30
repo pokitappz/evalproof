@@ -1,0 +1,14 @@
+{
+  "name": "@evalproof/cli",
+  "version": "0.1.0",
+  "description": "Local evidence-based mutation testing for AI graders",
+  "type": "module",
+  "license": "UNLICENSED",
+  "bin": { "evalproof": "cli.mjs" },
+  "files": ["cli.mjs", "adapter.mjs", "bin", "README.md"],
+  "engines": { "node": ">=22.22.0" },
+  "peerDependencies": { "promptfoo": "0.123.0" },
+  "peerDependenciesMeta": { "promptfoo": { "optional": true } },
+  "devDependencies": { "promptfoo": "0.123.0" },
+  "scripts": { "test": "node --test tests/*.test.mjs" }
+}

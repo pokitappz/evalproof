@@ -1,0 +1,14 @@
+/target/
+**/node_modules/
+**/__pycache__/
+**/.evalproof/
+**/.venv/
+**/dist/
+**/build/
+**/*.egg-info/
+.env
+*.lease
+*.pem
+packages/python/evalproof/bin/
+packages/node/bin/evalproof*
+.DS_Store

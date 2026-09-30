@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "name": "Promptfoo invoice grader",
+  "confirmed": true,
+  "adapter": {
+    "command": ["node", "../../packages/node/adapter.mjs", "promptfooconfig.json"],
+    "mode": "deterministic",
+    "dependencies": ["promptfooconfig.json", "../../packages/node/adapter.mjs", "../../packages/node/package-lock.json"],
+    "cache_safe": false,
+    "identity": "promptfoo-0.123.0-invoice"
+  },
+  "fixtures": [{
+    "id": "invoice-1",
+    "output": {"total": 125},
+    "context": {"test_index": 0},
+    "semantic_json": true,
+    "rules": [
+      {"id": "total-present", "path": "/total", "kind": "required"},
+      {"id": "total-value", "path": "/total", "kind": "exact", "value": 125}
+    ]
+  }]
+}

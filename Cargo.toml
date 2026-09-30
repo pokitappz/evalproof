@@ -1,0 +1,38 @@
+[package]
+name = "evalproof"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+description = "Local, evidence-based mutation testing for AI evaluators"
+
+[dependencies]
+anyhow = "1"
+axum = "0.8"
+base64 = "0.22"
+clap = { version = "4", features = ["derive"] }
+ed25519-dalek = "3.0.0"
+fs2 = "0.4"
+futures = "0.3"
+hex = "0.4"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rust_decimal = "1.43.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["arbitrary_precision"] }
+sha2 = "0.10"
+statrs = { version = "0.19.1", default-features = false, features = ["std"] }
+tokio = { version = "1", features = ["full"] }
+walkdir = "2"
+tempfile = "3"
+
+[profile.release]
+lto = "thin"
+strip = true
+
+[[bin]]
+name = "evalproof"
+path = "src/main.rs"
+
+[[bin]]
+name = "evalproof-entitlements"
+path = "src/bin/entitlements.rs"

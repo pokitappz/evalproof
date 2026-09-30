@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EvalProof - find the wrong answers your AI grader accepts</title>
+<meta name="description" content="EvalProof mutates your frozen AI outputs, proves each change is wrong against a reviewed contract, and checks whether your existing grader notices. Runs locally and in your CI.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!-- Replace CHECKOUT_URL and PORTAL_URL with the live Lemon Squeezy links before deploying (docs/release.md). -->
+<header>
+  <a class="brand" href="./">EvalProof</a>
+  <nav><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="https://github.com/evalproof/evalproof#readme">Docs</a></nav>
+</header>
+<main>
+  <h1>Your AI grader says PASS. Is it right?</h1>
+  <p class="lede">EvalProof changes your frozen model outputs in ways a reviewed contract proves are wrong, then runs your existing grader against them. Every wrong answer it accepts is a bug your evals would ship.</p>
+  <div class="cta">
+    <a class="button primary" href="CHECKOUT_URL">Start 14-day free trial</a>
+    <a class="button" href="#try">Try it free locally</a>
+  </div>
+
+  <pre id="try"><code>pip install evalproof          # or: npm install -g evalproof
+evalproof init --demo
+evalproof diagnose
+
+<span class="bad">FAIL</span>: Evaluator contract checks
+7 cases; 7 calls; 0.58s
+The grader does not meet the configured error policy
+Report: .evalproof/report.html</code></pre>
+  <p class="muted">The demo grader only checks that <code>invoice_id</code> exists, so it accepts invoices with wrong totals and identifiers. The report shows each one.</p>
+
+  <h2 id="how">How it works</h2>
+  <div class="grid">
+    <div class="card"><h3>1. Freeze</h3><p>Point EvalProof at outputs you already have and the grader you already run: a Python function or a Promptfoo config. It never calls your application model.</p></div>
+    <div class="card"><h3>2. Prove</h3><p>You review a JSON contract per fixture. EvalProof generates mutations that break it, plus valid controls, and shows why each one is wrong.</p></div>
+    <div class="card"><h3>3. Gate</h3><p>Deterministic graders must catch every mutation. LLM graders get bounded sampling with exact confidence intervals, so a flaky judge is INCONCLUSIVE, not PASS.</p></div>
+  </div>
+
+  <h2>Private by design</h2>
+  <p>Fixtures, grader outputs and reports never leave your machine or CI runner. Reports load nothing remote and contain no telemetry. The only hosted piece is a license check that sees your license key and GitHub organization name.</p>
+
+  <h2 id="pricing">Pricing</h2>
+  <div class="plans">
+    <div class="plan">
+      <h3>Free</h3>
+      <div class="price">$0</div>
+      <ul>
+        <li>Unlimited local diagnostics on developer machines</li>
+        <li>Full HTML evidence reports</li>
+        <li>Python and Promptfoo adapters</li>
+        <li>Deterministic and LLM grader statistics</li>
+      </ul>
+      <a class="button" href="#try">Install</a>
+    </div>
+    <div class="plan featured">
+      <h3>Team</h3>
+      <div class="price">$79 <small>/ organization / month</small></div>
+      <ul>
+        <li>Everything in Free</li>
+        <li>Runs in CI: blocking <code>evalproof check</code> gate with PASS / FAIL / INCONCLUSIVE exit codes</li>
+        <li>GitHub Action with pull request summary comments</li>
+        <li>Automatic comparison against your default-branch baseline</li>
+        <li>Unlimited projects, repositories, runs and developers in one GitHub organization</li>
+        <li>Seven-day offline license lease; CI keeps working through outages</li>
+      </ul>
+      <a class="button primary" href="CHECKOUT_URL">Start 14-day free trial</a>
+      <p class="muted">Cancel any time from the <a href="PORTAL_URL">billing portal</a>. Model calls are billed by your own provider.</p>
+    </div>
+  </div>
+</main>
+<footer>
+  <a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="PORTAL_URL">Manage subscription</a>
+  <p>Payments and tax are handled by Lemon Squeezy, our merchant of record.</p>
+</footer>
+</body>
+</html>
