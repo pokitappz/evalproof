@@ -10,11 +10,16 @@ pub const LEASE_VERSION: u32 = 2;
 /// Public pricing page; release builds can pin a direct checkout link instead.
 pub const PRICING_URL: &str = "https://evalproof.dev/#pricing";
 
+// CI passes unset repository variables as empty strings, so treat those as absent.
 pub fn checkout_url() -> &'static str {
-    option_env!("EVALPROOF_CHECKOUT_URL").unwrap_or(PRICING_URL)
+    option_env!("EVALPROOF_CHECKOUT_URL")
+        .filter(|url| !url.is_empty())
+        .unwrap_or(PRICING_URL)
 }
 pub fn portal_url() -> &'static str {
-    option_env!("EVALPROOF_PORTAL_URL").unwrap_or("https://app.lemonsqueezy.com/my-orders")
+    option_env!("EVALPROOF_PORTAL_URL")
+        .filter(|url| !url.is_empty())
+        .unwrap_or("https://app.lemonsqueezy.com/my-orders")
 }
 
 /// Normalizes an organization name. Each subscription is bound to a limited

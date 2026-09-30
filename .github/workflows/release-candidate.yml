@@ -29,6 +29,17 @@ jobs:
       EVALPROOF_LICENSE_ENVIRONMENT: live
       MACOSX_DEPLOYMENT_TARGET: '11.0'
     steps:
+      - name: Require release licensing configuration
+        shell: bash
+        run: |
+          missing=()
+          for name in EVALPROOF_LICENSE_PUBLIC_KEY EVALPROOF_ENTITLEMENT_URL EVALPROOF_CHECKOUT_URL EVALPROOF_PORTAL_URL; do
+            [ -n "${!name}" ] || missing+=("$name")
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Set these repository variables before building a release: ${missing[*]}"
+            exit 1
+          fi
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-python@v7.0.0
         with:

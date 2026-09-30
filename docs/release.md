@@ -72,6 +72,30 @@ Test the full test-mode purchase, trial, receipt, first-organization activation,
 
 If the signing key is compromised, deploy a new signing key and publish clients with the new public key. Existing clients require an update; this initial release has no remote key rotation mechanism.
 
+## Publishing the Python wheels
+
+`.github/workflows/publish-python.yml` uploads the wheels from a successful `Build release candidate` run on `main`. It never rebuilds. Before uploading, it:
+
+- Checks that the run is a successful release candidate built from `main`.
+- Verifies every `SHA256SUMS` file and requires exactly one wheel of the current version for each of the five targets.
+- Checks that each executable contains the repository's release public key, entitlement URL and checkout URL, and does not contain the offline test key from `ci.yml`.
+- Runs `smoke_package.py` against the installed Linux x64 wheel.
+
+Uploads use [PyPI trusted publishing](https://docs.pypi.org/trusted-publishers/) through `pypa/gh-action-pypi-publish`, so no API token is stored. PyPI never allows a version number to be reused, so always publish to TestPyPI first.
+
+One-time setup:
+
+1. In the repository settings, create the environments `testpypi` and `pypi`, each with required reviewers.
+2. On test.pypi.org and pypi.org, add a pending trusted publisher for project `evalproof`: owner `pokitappz`, repository `evalproof`, workflow `publish-python.yml`, and environment `testpypi` or `pypi` respectively.
+3. Set the repository variables `EVALPROOF_LICENSE_PUBLIC_KEY`, `EVALPROOF_ENTITLEMENT_URL`, `EVALPROOF_CHECKOUT_URL` and `EVALPROOF_PORTAL_URL`. The release candidate workflow refuses to build without them.
+
+Release steps:
+
+1. Run `Build release candidate` on `main`.
+2. Run `Publish Python wheels` with that run's ID and `testpypi`. Install from TestPyPI with `pip install -i https://test.pypi.org/simple/ evalproof==VERSION` and complete a test-mode purchase end to end.
+3. Run `Publish Python wheels` again with the same run ID and `pypi`.
+4. Tag the released commit (`git tag -a vVERSION`) and push the tag, so the GitHub Action's pinned version is installable.
+
 ## GitHub Action
 
 `action.yml` at the repository root is a composite action. Publishing it means tagging a release of this repository (for example `v0.1.0`) and optionally listing it on the GitHub Marketplace. It installs the pinned PyPI package, so publish the Python wheels first. `smoke_package.py` clears CI variables because unlicensed `diagnose` is refused inside CI.

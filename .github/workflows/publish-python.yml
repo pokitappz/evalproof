@@ -1,0 +1,119 @@
+# Publishes the Python wheels from a successful "Build release candidate" run.
+# Nothing is rebuilt: the exact artifacts that passed the per-platform smoke tests
+# are verified and uploaded with PyPI trusted publishing (no stored token).
+# PyPI never allows a version to be reused, so publish to TestPyPI first.
+name: Publish Python wheels
+on:
+  workflow_dispatch:
+    inputs:
+      run-id:
+        description: ID of a successful "Build release candidate" run on main
+        required: true
+      index:
+        description: Package index to publish to
+        type: choice
+        options: [testpypi, pypi]
+        default: testpypi
+permissions:
+  contents: read
+concurrency:
+  group: publish-python
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    env:
+      RUN_ID: ${{ inputs.run-id }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check the release candidate run
+        run: |
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::run-id must be numeric"; exit 1; }
+          read -r name branch event conclusion sha < <(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" \
+            --jq '[.name, .head_branch, .event, .conclusion, .head_sha] | @tsv')
+          echo "Run $RUN_ID: $name on $branch ($event) at $sha: $conclusion"
+          [ "$name" = "Build release candidate" ] || { echo "::error::Not a release candidate run"; exit 1; }
+          [ "$branch" = "main" ] || { echo "::error::Release candidates must be built from main"; exit 1; }
+          [ "$conclusion" = "success" ] || { echo "::error::Release candidate run did not succeed"; exit 1; }
+          echo "RELEASE_SHA=$sha" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          run-id: ${{ inputs.run-id }}
+          github-token: ${{ github.token }}
+          pattern: evalproof-*
+          path: artifacts
+      - name: Verify checksums, versions and licensing configuration
+        env:
+          PUBLIC_KEY: ${{ vars.EVALPROOF_LICENSE_PUBLIC_KEY }}
+          ENTITLEMENT_URL: ${{ vars.EVALPROOF_ENTITLEMENT_URL }}
+          CHECKOUT_URL: ${{ vars.EVALPROOF_CHECKOUT_URL }}
+        run: |
+          set -euo pipefail
+          # Public offline test key from ci.yml; a wheel containing it cannot validate live leases.
+          test_key=ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c
+          for name in PUBLIC_KEY ENTITLEMENT_URL CHECKOUT_URL; do
+            [ -n "${!name}" ] || { echo "::error::Repository variable for $name is not set"; exit 1; }
+          done
+          version="$(python -c 'import tomllib; print(tomllib.load(open("packages/python/pyproject.toml","rb"))["project"]["version"])')"
+          mkdir -p dist
+          for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-pc-windows-msvc; do
+            dir="artifacts/evalproof-$target"
+            [ -d "$dir" ] || { echo "::error::Missing artifact for $target"; exit 1; }
+            (cd "$dir" && sha256sum --check --strict SHA256SUMS)
+            wheels=("$dir"/evalproof-"$version"-py3-none-*.whl)
+            [ "${#wheels[@]}" -eq 1 ] && [ -f "${wheels[0]}" ] || { echo "::error::Expected one $version wheel for $target"; exit 1; }
+            unpacked="$(mktemp -d)"
+            python -m zipfile -e "${wheels[0]}" "$unpacked"
+            binary="$(find "$unpacked" -path '*/evalproof/bin/evalproof*' -type f)"
+            [ "$(printf '%s\n' "$binary" | grep -c .)" -eq 1 ] || { echo "::error::Expected one executable in the $target wheel"; exit 1; }
+            for value in "$PUBLIC_KEY" "$ENTITLEMENT_URL" "$CHECKOUT_URL"; do
+              grep -a -F -q "$value" "$binary" || { echo "::error::$target wheel was not built with the release licensing configuration"; exit 1; }
+            done
+            if grep -a -F -q "$test_key" "$binary"; then
+              echo "::error::$target wheel contains the offline test public key"; exit 1
+            fi
+            cp "${wheels[0]}" dist/
+          done
+          ls -l dist
+      - name: Smoke test the Linux x64 wheel
+        run: |
+          python -m pip install --no-deps dist/*manylinux_2_17_x86_64.whl
+          python scripts/smoke_package.py
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: python-dist
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-24.04
+    # Protect both environments with required reviewers in the repository settings.
+    environment:
+      name: ${{ inputs.index }}
+      url: ${{ inputs.index == 'pypi' && 'https://pypi.org/p/evalproof' || 'https://test.pypi.org/p/evalproof' }}
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: python-dist
+          path: dist
+      - name: Publish to TestPyPI
+        if: inputs.index == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          repository-url: https://test.pypi.org/legacy/
+      - name: Publish to PyPI
+        if: inputs.index == 'pypi'
+        uses: pypa/gh-action-pypi-publish@v1.14.2
